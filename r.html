@@ -72,7 +72,7 @@
       var to = dev === 'ios' ? d.ios : dev === 'android' ? d.android : d.web;
       if (to && /^https:\/\//i.test(to)) { location.replace(to); return; }
     }
-    load('qrstyle.js').then(function () { return load('landing.js'); }).then(function () {
+    load('qrstyle.js?v=3').then(function () { return load('landing.js?v=3'); }).then(function () {
       Landing.injectCss();
       var pg = document.getElementById('page');
       pg.innerHTML = Landing.render(r.tipo, d);
