@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#4f46e5">
+<title>Redirigiendo…</title>
+<style>
+  :root{--bg:#f4f5f9;--ink:#14161f;--mut:#667085;--acc:#4f46e5}
+  @media (prefers-color-scheme:dark){:root{--bg:#0d0f16;--ink:#eef0f6;--mut:#98a1b3;--acc:#818cf8}}
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;display:grid;place-items:center;padding:24px;text-align:center}
+  .box{max-width:360px}
+  .sp{width:34px;height:34px;border-radius:50%;border:3px solid color-mix(in srgb,var(--acc) 25%,transparent);border-top-color:var(--acc);margin:0 auto 14px;animation:r .8s linear infinite}
+  @keyframes r{to{transform:rotate(360deg)}}
+  h1{font-size:1.25rem;margin:0 0 6px}
+  p{margin:0;color:var(--mut)}
+  .ico{font-size:2.4rem;margin-bottom:6px}
+</style>
+</head>
+<body>
+<div class="box" id="box"><div class="sp"></div><p>Un momento…</p></div>
+<script src="config.js"></script>
+<script>
+(function () {
+  var box = document.getElementById('box');
+  var MSG = {
+    noexiste: ['🔍', 'Este código QR no existe', 'Puede que se haya eliminado.'],
+    pausado:  ['⏸️', 'Este código QR está en pausa', 'Su propietario lo ha desactivado temporalmente.'],
+    vencido:  ['⌛', 'Este código QR no está disponible', 'El servicio de su propietario ha caducado.'],
+    bloqueado:['🚫', 'Este código QR no está disponible', 'Contacta con su propietario.'],
+    error:    ['📡', 'No se pudo cargar', 'Comprueba tu conexión e inténtalo de nuevo.']
+  };
+  function show(k) {
+    var m = MSG[k] || MSG.error;
+    box.innerHTML = '<div class="ico">' + m[0] + '</div><h1>' + m[1] + '</h1><p>' + m[2] + '</p>';
+    document.title = m[1];
+  }
+  var q = (new URLSearchParams(location.search).get('q') || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  var api = (window.CFG && window.CFG.API) || '';
+  if (!q || !/^https:\/\//.test(api)) return show(q ? 'error' : 'noexiste');
+
+  var ua = navigator.userAgent || '';
+  var dev = /iPhone|iPad|iPod/i.test(ua) ? 'ios' : /Android/i.test(ua) ? 'android' : /Windows/i.test(ua) ? 'windows' : /Mac/i.test(ua) ? 'mac' : /Linux/i.test(ua) ? 'linux' : 'otro';
+
+  var done = false;
+  window.__qrcb = function (r) {
+    done = true;
+    if (r && r.ok && r.url) { location.replace(r.url); }
+    else show(r && r.reason);
+  };
+  var s = document.createElement('script');
+  s.src = api + (api.indexOf('?') < 0 ? '?' : '&') + 'action=go&qid=' + encodeURIComponent(q) + '&device=' + dev + '&callback=__qrcb';
+  s.onerror = function () { if (!done) show('error'); };
+  document.head.appendChild(s);
+  setTimeout(function () { if (!done) show('error'); }, 15000);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,679 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#4f46e5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="QR Dinámicos">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>QR Dinámicos</title>
+<style>
+:root{
+  --bg:#f4f5f9;--card:#ffffff;--ink:#14161f;--mut:#667085;--line:#e4e7ee;
+  --acc:#4f46e5;--onacc:#ffffff;--accsoft:#eef0ff;
+  --ok:#12a150;--warn:#c27803;--bad:#d92d20;
+  --okbg:#e7f6ee;--warnbg:#fff4de;--badbg:#fdeceb;
+  --shadow:0 1px 2px rgba(16,24,40,.06),0 10px 28px rgba(16,24,40,.07);
+  --r:16px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0d0f16;--card:#171a24;--ink:#eef0f6;--mut:#98a1b3;--line:#272b39;
+    --acc:#818cf8;--onacc:#0d0f16;--accsoft:#222645;
+    --ok:#3ddc84;--warn:#f5b84a;--bad:#ff7b72;
+    --okbg:#12301f;--warnbg:#38290d;--badbg:#3a1714;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px rgba(0,0,0,.35);
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100vh;
+  padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+body.lock{overflow:hidden}
+button,input,select{font:inherit;color:inherit}
+h1,h2,h3{margin:0;line-height:1.2}
+code{font:12.5px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-all}
+.mut{color:var(--mut)}
+.hide{display:none!important}
+
+/* botones */
+.btn{appearance:none;border:1px solid var(--line);background:var(--card);padding:9px 14px;border-radius:11px;cursor:pointer;font-weight:600;font-size:14px;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;transition:transform .05s,background .15s}
+.btn:hover{background:var(--accsoft)}
+.btn:active{transform:scale(.97)}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:var(--onacc)}
+.btn.pri:hover{filter:brightness(1.08);background:var(--acc)}
+.btn.bad{color:var(--bad)}
+.btn.sm{padding:6px 10px;min-height:34px;font-size:13px;border-radius:9px}
+.btn:disabled{opacity:.55;cursor:default}
+
+/* login */
+#login{min-height:100vh;display:grid;place-items:center;padding:24px}
+.lbox{width:100%;max-width:400px;background:var(--card);border:1px solid var(--line);border-radius:22px;padding:28px 24px;box-shadow:var(--shadow)}
+.logo{width:56px;height:56px;border-radius:15px;display:block;margin:0 auto 14px}
+.lbox h1{text-align:center;font-size:1.45rem}
+.lbox p.sub{text-align:center;margin:6px 0 20px;color:var(--mut)}
+label.f{display:block;font-size:13px;font-weight:600;margin:12px 0 5px;color:var(--mut)}
+.inp{width:100%;padding:11px 12px;border-radius:11px;border:1px solid var(--line);background:var(--bg);outline:none;min-height:44px}
+.inp:focus{border-color:var(--acc);box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 22%,transparent)}
+.err{color:var(--bad);font-size:13.5px;min-height:20px;margin-top:10px}
+
+/* app */
+header.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top)}
+.top .in{max-width:1280px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:10px}
+.top img{width:34px;height:34px;border-radius:9px}
+.top .tt{font-weight:700;font-size:16px;white-space:nowrap}
+.top .who{color:var(--mut);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.top .sp{flex:1}
+main{max-width:1280px;margin:0 auto;overflow-x:hidden;padding:16px 16px calc(40px + env(safe-area-inset-bottom))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--shadow)}
+
+/* cliente */
+.cgrid{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+.cgrid>*,.qgrid>*,.cls>*{min-width:0}
+.plan .lbl{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+.days{display:flex;align-items:baseline;gap:10px;margin:8px 0 10px}
+.days b{font-size:3.6rem;line-height:1;font-variant-numeric:tabular-nums}
+.days span{color:var(--mut);font-weight:600}
+.days.ok b{color:var(--ok)} .days.warn b{color:var(--warn)} .days.bad b{color:var(--bad)}
+.bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px;background:var(--ok);transition:width .4s}
+.days.warn + .bar i{background:var(--warn)} .days.bad + .bar i{background:var(--bad)}
+.plan .row2{display:flex;justify-content:space-between;gap:10px;margin:10px 0 14px;color:var(--mut);font-size:13.5px;flex-wrap:wrap}
+.plan .btn{width:100%}
+.hint{font-size:13px;color:var(--mut);margin:10px 0 0}
+.banner{padding:12px 14px;border-radius:12px;font-size:14px;margin-bottom:14px;background:var(--badbg);color:var(--bad);font-weight:600}
+.banner.w{background:var(--warnbg);color:var(--warn)}
+.shead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.shead h2{font-size:1.15rem}
+.qgrid{display:grid;gap:12px;grid-template-columns:minmax(0,1fr)}
+.q{display:flex;gap:12px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;box-shadow:var(--shadow)}
+.q .thumb{flex:0 0 76px;width:76px;height:76px;border-radius:10px;background:#fff;border:1px solid var(--line);cursor:pointer;display:block}
+.q .bd{min-width:0;flex:1}
+.q h3{font-size:15.5px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.q .dest{color:var(--mut);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:2px 0 8px}
+.q .acts{display:flex;gap:6px;flex-wrap:wrap}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--accsoft);color:var(--acc)}
+.tag.ok{background:var(--okbg);color:var(--ok)} .tag.warn{background:var(--warnbg);color:var(--warn)} .tag.bad{background:var(--badbg);color:var(--bad)}
+.empty{text-align:center;padding:36px 16px;color:var(--mut);border:2px dashed var(--line);border-radius:var(--r)}
+
+/* admin */
+.tiles{display:grid;gap:10px;grid-template-columns:repeat(2,1fr);margin-bottom:16px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;box-shadow:var(--shadow)}
+.tile b{display:block;font-size:1.8rem;font-variant-numeric:tabular-nums;line-height:1.1}
+.tile span{color:var(--mut);font-size:13px}
+.tools{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.tools .inp{flex:1;min-width:180px}
+.cl{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px}
+.cl .h{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.cl h3{font-size:16px}
+.cl .meta{display:flex;gap:14px;flex-wrap:wrap;color:var(--mut);font-size:13.5px}
+.cl .meta b{color:var(--ink)}
+.cl .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto}
+.cls{display:grid;gap:12px;grid-template-columns:minmax(0,1fr)}
+
+/* modal */
+.modal{position:fixed;inset:0;z-index:50;background:rgba(10,12,20,.55);display:flex;align-items:flex-end;justify-content:center;animation:fade .15s}
+.sheet{width:100%;max-width:520px;max-height:92vh;overflow:auto;background:var(--card);border-radius:22px 22px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom));animation:up .2s;border:1px solid var(--line)}
+.sheet h2{font-size:1.2rem;margin-bottom:12px}
+.sheet .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.sheet .row .btn{flex:1 1 120px}
+.qrbox{background:#fff;border-radius:14px;padding:10px;margin:0 auto;width:100%;max-width:320px;border:1px solid var(--line)}
+.qrbox canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
+.link{margin:12px 0 4px;padding:9px 11px;background:var(--bg);border-radius:10px;border:1px solid var(--line)}
+.chk{display:flex;gap:8px;align-items:center;margin-top:12px;font-weight:600}
+.chk input{width:18px;height:18px}
+.stat3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:6px 0 14px}
+.stat3 div{background:var(--bg);border-radius:12px;padding:10px;text-align:center}
+.stat3 b{display:block;font-size:1.5rem}
+.stat3 span{font-size:12px;color:var(--mut)}
+.devs{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.steps{padding-left:20px;margin:8px 0}
+.steps li{margin:6px 0}
+@keyframes up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+
+#toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);background:#14161f;color:#fff;padding:11px 16px;border-radius:12px;font-size:14px;opacity:0;pointer-events:none;transition:.25s;z-index:99;max-width:90vw;text-align:center}
+#toast.on{opacity:1;transform:translateX(-50%)}
+#busy{position:fixed;inset:0;z-index:90;background:rgba(10,12,20,.25);display:none;place-items:center}
+#busy.on{display:grid}
+#busy i{width:38px;height:38px;border-radius:50%;border:4px solid rgba(255,255,255,.35);border-top-color:#fff;animation:rot .8s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+/* ORDENADOR: horizontal */
+@media (min-width:900px){
+  main{padding:24px 24px 48px}
+  .top .in{padding:12px 24px}
+  .cgrid{grid-template-columns:340px minmax(0,1fr);align-items:start}
+  .plan{position:sticky;top:84px}
+  .qgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tiles{grid-template-columns:repeat(4,1fr)}
+  .cls{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .modal{align-items:center}
+  .sheet{border-radius:22px;padding:24px}
+}
+@media (min-width:1280px){
+  .qgrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .cls{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+/* MÓVIL: vertical */
+@media (max-width:899px){
+  .top .who{display:none}
+  .top .btn .tx{display:none}
+}
+</style>
+</head>
+<body>
+
+<div id="login" class="hide">
+  <form class="lbox" id="lf" autocomplete="on">
+    <img class="logo" src="icon-192.png" alt="">
+    <h1>QR Dinámicos</h1>
+    <p class="sub">Entra con tu usuario y contraseña</p>
+    <label class="f" for="lu">Usuario</label>
+    <input class="inp" id="lu" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
+    <label class="f" for="lp">Contraseña</label>
+    <input class="inp" id="lp" name="password" type="password" autocomplete="current-password">
+    <div class="err" id="le"></div>
+    <button class="btn pri" style="width:100%;margin-top:6px" id="lb">Entrar</button>
+    <button type="button" class="btn" style="width:100%;margin-top:10px" data-act="install" id="linst">Instalar app</button>
+  </form>
+</div>
+
+<div id="app" class="hide">
+  <header class="top"><div class="in">
+    <img src="icon-192.png" alt="">
+    <span class="tt">QR Dinámicos</span>
+    <span class="who" id="who"></span>
+    <span class="sp"></span>
+    <button class="btn sm hide" data-act="install" id="hinst">⬇️<span class="tx"> Instalar</span></button>
+    <button class="btn sm" data-act="shareapp">📤<span class="tx"> Compartir app</span></button>
+    <button class="btn sm" data-act="settings">⚙️<span class="tx"> Ajustes</span></button>
+  </div></header>
+  <main id="main"></main>
+</div>
+
+<div id="toast"></div>
+<div id="busy"><i></i></div>
+
+<script src="config.js"></script>
+<script src="qr.js"></script>
+<script>
+(function () {
+'use strict';
+
+/* ───────── utilidades ───────── */
+var $ = function (s, r) { return (r || document).querySelector(s); };
+var API = (window.CFG && window.CFG.API) || '';
+var TOK_KEY = 'qrdin_tok';
+var token = ls_get(TOK_KEY);
+var S = { rol: null, nombre: '', cli: null, qrs: [], clientes: [], resumen: null, cfg: null, filtro: '' };
+
+function ls_get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function ls_set(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} }
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+function fmtDate(d) { return d ? d.slice(8, 10) + '/' + d.slice(5, 7) + '/' + d.slice(0, 4) : '—'; }
+function todayStr() {
+  var n = new Date();
+  return n.getFullYear() + '-' + ('0' + (n.getMonth() + 1)).slice(-2) + '-' + ('0' + n.getDate()).slice(-2);
+}
+function addDays(ds, n) {
+  var p = ds.split('-').map(Number);
+  var d = new Date(Date.UTC(p[0], p[1] - 1, p[2]));
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+function fname(s) { return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'qr'; }
+
+var toastT;
+function toast(msg) {
+  var t = $('#toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(toastT); toastT = setTimeout(function () { t.classList.remove('on'); }, 2800);
+}
+function busy(on) { $('#busy').classList.toggle('on', !!on); }
+
+function copy(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(text).then(function () { toast('Copiado'); }, fallback);
+  }
+  fallback();
+  function fallback() {
+    var t = document.createElement('textarea'); t.value = text; t.style.position = 'fixed'; t.style.opacity = '0';
+    document.body.appendChild(t); t.select();
+    try { document.execCommand('copy'); toast('Copiado'); } catch (e) { toast('No se pudo copiar'); }
+    t.remove();
+  }
+}
+
+/* ───────── API ───────── */
+function post(action, data) {
+  if (!/^https:\/\//.test(API)) return Promise.reject(new Error('Falta configurar la URL del servidor en config.js'));
+  var body = Object.assign({ action: action, token: token }, data || {});
+  return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) })
+    .then(function (r) { return r.json(); });
+}
+function api(action, data) {
+  return post(action, data).then(function (j) {
+    if (j && j.auth) { doLogout(); throw new Error('Tu sesión ha caducado. Entra de nuevo.'); }
+    if (!j || !j.ok) throw new Error((j && j.error) || 'Error del servidor');
+    return j;
+  });
+}
+function run(fn) {
+  busy(true);
+  return Promise.resolve().then(fn).catch(function (e) { toast(e.message || 'Error'); throw e; })
+    .then(function (v) { busy(false); return v; }, function (e) { busy(false); throw e; });
+}
+
+/* ───────── modales ───────── */
+function modal(html) {
+  var m = document.createElement('div');
+  m.className = 'modal';
+  m.innerHTML = '<div class="sheet">' + html + '</div>';
+  m.addEventListener('click', function (e) {
+    if (e.target === m || e.target.closest('[data-close]')) closeModal(m);
+  });
+  document.body.appendChild(m);
+  document.body.classList.add('lock');
+  return m;
+}
+function closeModal(m) {
+  m.remove();
+  if (!document.querySelector('.modal')) document.body.classList.remove('lock');
+}
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') { var ms = document.querySelectorAll('.modal'); if (ms.length) closeModal(ms[ms.length - 1]); }
+});
+
+/* ───────── QR: dibujo y exportación ───────── */
+function shortUrl(id) {
+  var base = location.href.split('#')[0].split('?')[0].replace(/[^\/]*$/, '');
+  return base + 'r.html?q=' + id;
+}
+function qrObj(text) { var q = qrcode(0, 'M'); q.addData(text); q.make(); return q; }
+function drawQR(canvas, text, size) {
+  var q = qrObj(text), n = q.getModuleCount(), quiet = 4, cells = n + quiet * 2;
+  var px = Math.max(1, Math.floor(size / cells));
+  canvas.width = canvas.height = px * cells;
+  var g = canvas.getContext('2d');
+  g.fillStyle = '#fff'; g.fillRect(0, 0, canvas.width, canvas.height);
+  g.fillStyle = '#000';
+  for (var r = 0; r < n; r++) for (var c = 0; c < n; c++) {
+    if (q.isDark(r, c)) g.fillRect((c + quiet) * px, (r + quiet) * px, px, px);
+  }
+}
+function qrSvg(text) {
+  var q = qrObj(text), n = q.getModuleCount(), quiet = 4, t = n + quiet * 2, d = '';
+  for (var r = 0; r < n; r++) {
+    var c = 0;
+    while (c < n) {
+      if (q.isDark(r, c)) {
+        var s = c; while (c < n && q.isDark(r, c)) c++;
+        d += 'M' + (s + quiet) + ' ' + (r + quiet) + 'h' + (c - s) + 'v1h-' + (c - s) + 'z';
+      } else c++;
+    }
+  }
+  return '<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + t + ' ' + t + '" width="1024" height="1024" shape-rendering="crispEdges"><rect width="100%" height="100%" fill="#fff"/><path d="' + d + '" fill="#000"/></svg>';
+}
+function download(blob, name) {
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+}
+function pngBlob(text) {
+  var c = document.createElement('canvas'); drawQR(c, text, 1200);
+  return new Promise(function (res) { c.toBlob(res, 'image/png'); });
+}
+function shareQR(q) {
+  var url = shortUrl(q.id);
+  return pngBlob(url).then(function (blob) {
+    var file = new File([blob], fname(q.nombre) + '.png', { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) return navigator.share({ files: [file], title: q.nombre, text: url });
+    if (navigator.share) return navigator.share({ title: q.nombre, url: url });
+    return copy(url);
+  }).catch(function (e) { if (e && e.name !== 'AbortError') toast('No se pudo compartir'); });
+}
+
+/* ───────── instalar / compartir app ───────── */
+var deferred = null;
+var isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferred = e; refreshInstall(); });
+window.addEventListener('appinstalled', function () { deferred = null; isStandalone = true; refreshInstall(); toast('App instalada'); });
+function refreshInstall() {
+  var show = !isStandalone;
+  $('#hinst').classList.toggle('hide', !show);
+  $('#linst').classList.toggle('hide', !show);
+}
+function doInstall() {
+  if (deferred) {
+    deferred.prompt();
+    deferred.userChoice.then(function () { deferred = null; refreshInstall(); });
+    return;
+  }
+  var steps = isIOS
+    ? '<li>Pulsa el botón <b>Compartir</b> (el cuadrado con la flecha) de Safari.</li><li>Elige <b>Añadir a pantalla de inicio</b>.</li><li>Pulsa <b>Añadir</b>.</li>'
+    : '<li>Abre el menú del navegador (⋮ o ⋯).</li><li>Elige <b>Instalar aplicación</b> o <b>Añadir a pantalla de inicio</b>.</li><li>Confirma.</li>';
+  var m = modal('<h2>Instalar la app</h2><ol class="steps">' + steps + '</ol><div class="row"><button class="btn pri" data-close>Entendido</button></div>');
+}
+function appUrl() { return location.href.split('#')[0].split('?')[0].replace(/index\.html$/, ''); }
+function shareApp() {
+  var url = appUrl();
+  if (navigator.share) navigator.share({ title: 'QR Dinámicos', text: 'Crea tus códigos QR dinámicos', url: url }).catch(function () {});
+  else copy(url);
+}
+
+/* ───────── sesión ───────── */
+function showLogin(msg) {
+  $('#app').classList.add('hide'); $('#login').classList.remove('hide');
+  $('#le').textContent = msg || ''; $('#lb').disabled = false;
+  refreshInstall();
+}
+function doLogout() {
+  token = null; ls_set(TOK_KEY, null); S.rol = null;
+  document.querySelectorAll('.modal').forEach(function (m) { m.remove(); });
+  document.body.classList.remove('lock');
+  showLogin();
+}
+$('#lf').addEventListener('submit', function (e) {
+  e.preventDefault();
+  var u = $('#lu').value.trim(), p = $('#lp').value;
+  if (!u || !p) { $('#le').textContent = 'Escribe usuario y contraseña'; return; }
+  $('#lb').disabled = true; $('#le').textContent = '';
+  busy(true);
+  post('login', { usuario: u, password: p }).then(function (j) {
+    busy(false);
+    if (!j.ok) { showLogin(j.error || 'No se pudo entrar'); return; }
+    token = j.token; ls_set(TOK_KEY, token); $('#lp').value = '';
+    return enter();
+  }).catch(function (err) { busy(false); showLogin(err.message || 'Sin conexión'); });
+});
+
+function enter() {
+  return api('me').then(function (j) {
+    S.rol = j.rol; S.nombre = j.nombre;
+    $('#login').classList.add('hide'); $('#app').classList.remove('hide');
+    $('#who').textContent = (j.rol === 'admin' ? 'Administrador' : j.nombre);
+    refreshInstall();
+    return j.rol === 'admin' ? loadAdmin() : loadClient();
+  });
+}
+
+/* ───────── CLIENTE ───────── */
+function loadClient() {
+  return api('cli_qrs').then(function (j) { S.cli = j.cliente; S.qrs = j.qrs; renderClient(); });
+}
+function daysClass(c) { return c.vencido ? 'bad' : (c.dias != null && c.dias <= 7 ? 'warn' : 'ok'); }
+
+function renderClient() {
+  var c = S.cli, cls = daysClass(c);
+  var diasTxt = c.dias == null ? '∞' : (c.vencido ? 0 : c.dias);
+  var pct = c.dias == null ? 100 : Math.max(0, Math.min(100, (c.vencido ? 0 : c.dias) / 30 * 100));
+  var banner = '';
+  if (!c.activo) banner = '<div class="banner">Tu cuenta está bloqueada. Contacta con el administrador.</div>';
+  else if (c.vencido) banner = '<div class="banner">Tu suscripción ha caducado: tus QR ya no redirigen. Renueva para reactivarlos.</div>';
+  else if (c.dias != null && c.dias <= 7) banner = '<div class="banner w">Te quedan ' + c.dias + ' día' + (c.dias === 1 ? '' : 's') + '. Renueva para no perder el servicio.</div>';
+
+  var plan =
+    '<aside class="card plan"><div class="lbl">Tu suscripción</div>' +
+    '<div class="days ' + cls + '"><b>' + diasTxt + '</b><span>días restantes</span></div>' +
+    '<div class="bar"><i style="width:' + pct + '%"></i></div>' +
+    '<div class="row2"><span>Caduca: <b>' + fmtDate(c.caducidad) + '</b></span><span>QR: <b>' + S.qrs.length + ' / ' + c.maxQR + '</b></span></div>' +
+    '<button class="btn pri" data-act="renew">💳 Pagar 30 días</button>' +
+    '<p class="hint">Cada pago añade 30 días. Si todavía te quedaban días, se suman: no pierdes ninguno. Los días se añaden cuando se confirma el pago.</p></aside>';
+
+  var list;
+  if (!S.qrs.length) list = '<div class="empty">Aún no tienes códigos QR.<br>Pulsa <b>Nuevo QR</b> para crear el primero.</div>';
+  else list = '<div class="qgrid">' + S.qrs.map(qrCard).join('') + '</div>';
+
+  $('#main').innerHTML = banner +
+    '<div class="cgrid">' + plan + '<section><div class="shead"><h2>Mis códigos QR</h2>' +
+    '<button class="btn pri" data-act="newqr"' + ((!c.activo || c.vencido || S.qrs.length >= c.maxQR) ? ' disabled' : '') + '>＋ Nuevo QR</button></div>' + list + '</section></div>';
+
+  S.qrs.forEach(function (q) {
+    var cv = $('[data-thumb="' + q.id + '"]'); if (cv) drawQR(cv, shortUrl(q.id), 240);
+  });
+}
+
+function qrCard(q) {
+  return '<div class="q" data-id="' + q.id + '">' +
+    '<canvas class="thumb" data-thumb="' + q.id + '" data-act="viewqr" data-id="' + q.id + '"></canvas>' +
+    '<div class="bd"><h3>' + esc(q.nombre) + ' <span class="tag ' + (q.activo ? 'ok' : 'warn') + '">' + (q.activo ? 'Activo' : 'Pausado') + '</span></h3>' +
+    '<div class="dest" title="' + esc(q.destino) + '">→ ' + esc(q.destino) + '</div>' +
+    '<div class="acts">' +
+    '<button class="btn sm" data-act="viewqr" data-id="' + q.id + '">Ver / Descargar</button>' +
+    '<button class="btn sm" data-act="editqr" data-id="' + q.id + '">✏️ Editar</button>' +
+    '<button class="btn sm" data-act="statsqr" data-id="' + q.id + '">📊 ' + q.escaneos + '</button>' +
+    '</div></div></div>';
+}
+
+function findQR(id) { return S.qrs.filter(function (q) { return q.id === id; })[0]; }
+
+function viewQR(q) {
+  var url = shortUrl(q.id);
+  var m = modal(
+    '<h2>' + esc(q.nombre) + '</h2><div class="qrbox"><canvas></canvas></div>' +
+    '<div class="link"><code>' + esc(url) + '</code></div>' +
+    '<div class="mut" style="font-size:13px;word-break:break-all">Lleva a: ' + esc(q.destino) + '</div>' +
+    '<div class="row"><button class="btn pri" data-d="png">⬇️ PNG</button><button class="btn" data-d="svg">⬇️ SVG</button>' +
+    '<button class="btn" data-d="share">📤 Compartir</button><button class="btn" data-d="copy">🔗 Copiar enlace</button></div>' +
+    '<div class="row"><button class="btn" data-close>Cerrar</button></div>');
+  drawQR($('canvas', m), url, 640);
+  m.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-d]'); if (!b) return;
+    var d = b.getAttribute('data-d');
+    if (d === 'png') pngBlob(url).then(function (bl) { download(bl, fname(q.nombre) + '.png'); });
+    else if (d === 'svg') download(new Blob([qrSvg(url)], { type: 'image/svg+xml' }), fname(q.nombre) + '.svg');
+    else if (d === 'share') shareQR(q);
+    else if (d === 'copy') copy(url);
+  });
+}
+
+function editQR(q) {
+  var nuevo = !q; q = q || { nombre: '', destino: '', activo: true };
+  var m = modal(
+    '<h2>' + (nuevo ? 'Nuevo QR' : 'Editar QR') + '</h2>' +
+    '<label class="f">Nombre</label><input class="inp" id="qn" maxlength="80" placeholder="Ej. Carta del restaurante" value="' + esc(q.nombre) + '">' +
+    '<label class="f">Destino (web, teléfono, correo…)</label><input class="inp" id="qd" inputmode="url" autocapitalize="none" spellcheck="false" placeholder="https://tuweb.com" value="' + esc(q.destino) + '">' +
+    (nuevo ? '' : '<label class="chk"><input type="checkbox" id="qa"' + (q.activo ? ' checked' : '') + '> Activo (si lo desmarcas, el QR deja de redirigir)</label>') +
+    '<p class="hint">Puedes cambiar el destino cuando quieras: el QR impreso seguirá funcionando.</p>' +
+    '<div class="row"><button class="btn" data-close>Cancelar</button><button class="btn pri" id="qs">Guardar</button></div>' +
+    (nuevo ? '' : '<div class="row"><button class="btn bad" id="qx">🗑️ Eliminar este QR</button></div>'));
+  $('#qs', m).onclick = function () {
+    var data = { nombre: $('#qn', m).value, destino: $('#qd', m).value };
+    if (!nuevo) { data.id = q.id; data.activo = $('#qa', m).checked; }
+    run(function () { return api('cli_qr_save', data); }).then(function (j) {
+      closeModal(m); return run(loadClient).then(function () {
+        toast('Guardado'); if (nuevo) { var nq = findQR(j.id); if (nq) viewQR(nq); }
+      });
+    }).catch(function () {});
+  };
+  var x = $('#qx', m);
+  if (x) x.onclick = function () {
+    if (!confirm('¿Eliminar este QR? Si ya está impreso dejará de funcionar.')) return;
+    run(function () { return api('cli_qr_delete', { id: q.id }); }).then(function () {
+      closeModal(m); return run(loadClient);
+    }).then(function () { toast('Eliminado'); }).catch(function () {});
+  };
+}
+
+var DEVN = { ios: 'iPhone/iPad', android: 'Android', windows: 'Windows', mac: 'Mac', linux: 'Linux', otro: 'Otro' };
+function statsQR(q) {
+  run(function () { return api('cli_qr_stats', { id: q.id }); }).then(function (j) {
+    var s = j.stats, max = 1;
+    s.dias.forEach(function (d) { if (d[1] > max) max = d[1]; });
+    var bars = s.dias.map(function (d, i) {
+      var h = Math.round(d[1] / max * 70);
+      return '<rect x="' + (i * 10) + '" y="' + (74 - h) + '" width="8" height="' + Math.max(h, d[1] ? 2 : 1) + '" rx="2" fill="currentColor" opacity="' + (d[1] ? 1 : .25) + '"><title>' + fmtDate(d[0]) + ': ' + d[1] + '</title></rect>';
+    }).join('');
+    var devs = Object.keys(s.dispositivos).sort(function (a, b) { return s.dispositivos[b] - s.dispositivos[a]; })
+      .map(function (k) { return '<span class="tag">' + (DEVN[k] || k) + ' · ' + s.dispositivos[k] + '</span>'; }).join('');
+    modal('<h2>📊 ' + esc(q.nombre) + '</h2>' +
+      '<div class="stat3"><div><b>' + s.total + '</b><span>Total</span></div><div><b>' + s.ultimos30 + '</b><span>30 días</span></div><div><b>' + s.ultimos7 + '</b><span>7 días</span></div></div>' +
+      '<div class="mut" style="font-size:13px">Escaneos por día (últimos 30)</div>' +
+      '<svg viewBox="0 0 300 76" style="width:100%;color:var(--acc);margin-top:6px">' + bars + '</svg>' +
+      (devs ? '<div class="devs">' + devs + '</div>' : '<p class="hint">Todavía no hay escaneos.</p>') +
+      '<div class="row"><button class="btn" data-close>Cerrar</button></div>');
+  }).catch(function () {});
+}
+
+/* ───────── ADMIN ───────── */
+function loadAdmin() {
+  return api('adm_clients').then(function (j) { S.clientes = j.clientes; S.resumen = j.resumen; renderAdmin(); });
+}
+function badge(c) {
+  if (!c.activo) return '<span class="tag bad">Bloqueado</span>';
+  if (c.vencido) return '<span class="tag bad">Caducado</span>';
+  if (c.dias != null && c.dias <= 7) return '<span class="tag warn">Vence en ' + c.dias + ' d</span>';
+  return '<span class="tag ok">' + (c.dias == null ? 'Sin límite' : c.dias + ' días') + '</span>';
+}
+function renderAdmin() {
+  var r = S.resumen, f = S.filtro.toLowerCase();
+  var rows = S.clientes.slice().sort(function (a, b) {
+    var da = a.dias == null ? 1e9 : a.dias, db = b.dias == null ? 1e9 : b.dias; return da - db;
+  }).filter(function (c) { return !f || (c.nombre + ' ' + c.usuario).toLowerCase().indexOf(f) >= 0; });
+  var cards = rows.map(function (c) {
+    return '<div class="cl"><div class="h"><div><h3>' + esc(c.nombre) + '</h3><div class="mut" style="font-size:13px">@' + esc(c.usuario) + '</div></div>' + badge(c) + '</div>' +
+      '<div class="meta"><span>Caduca: <b>' + fmtDate(c.caducidad) + '</b></span><span>QR: <b>' + c.usados + '/' + c.maxQR + '</b></span><span>Escaneos: <b>' + c.escaneos + '</b></span></div>' +
+      '<div class="acts"><button class="btn sm pri" data-act="renewadm" data-id="' + c.id + '">＋ 30 días</button>' +
+      '<button class="btn sm" data-act="editcli" data-id="' + c.id + '">✏️ Editar</button>' +
+      '<button class="btn sm bad" data-act="delcli" data-id="' + c.id + '">🗑️</button></div></div>';
+  }).join('');
+  $('#main').innerHTML =
+    '<div class="tiles"><div class="tile"><b>' + r.clientes + '</b><span>Clientes</span></div><div class="tile"><b>' + r.activos + '</b><span>Al día</span></div>' +
+    '<div class="tile"><b>' + r.qrs + '</b><span>QR creados</span></div><div class="tile"><b>' + r.escaneos + '</b><span>Escaneos</span></div></div>' +
+    '<div class="tools"><input class="inp" id="srch" placeholder="Buscar cliente…" value="' + esc(S.filtro) + '"><button class="btn pri" data-act="newcli">＋ Nuevo cliente</button></div>' +
+    (cards ? '<div class="cls">' + cards + '</div>' : '<div class="empty">' + (S.clientes.length ? 'Ningún cliente coincide.' : 'Todavía no hay clientes. Crea el primero.') + '</div>');
+  var s = $('#srch');
+  s.addEventListener('input', function () { S.filtro = s.value; var p = s.selectionStart; renderAdmin(); var n = $('#srch'); n.focus(); n.setSelectionRange(p, p); });
+}
+function findCli(id) { return S.clientes.filter(function (c) { return c.id === id; })[0]; }
+
+function editCli(c) {
+  var nuevo = !c; c = c || { nombre: '', usuario: '', maxQR: 5, caducidad: '', activo: true, enlacePagoPropio: '' };
+  var m = modal(
+    '<h2>' + (nuevo ? 'Nuevo cliente' : 'Editar cliente') + '</h2>' +
+    '<label class="f">Nombre</label><input class="inp" id="cn" maxlength="80" value="' + esc(c.nombre) + '">' +
+    '<label class="f">Usuario</label><input class="inp" id="cu" autocapitalize="none" spellcheck="false" value="' + esc(c.usuario) + '">' +
+    '<label class="f">Contraseña' + (nuevo ? '' : ' (vacío = no cambiar)') + '</label><input class="inp" id="cp" type="text" autocomplete="off" placeholder="mínimo 6 caracteres">' +
+    '<label class="f">Máximo de QR</label><input class="inp" id="cm" type="number" min="0" value="' + c.maxQR + '">' +
+    '<label class="f">Caduca el' + (nuevo ? ' (vacío = 30 días desde hoy)' : '') + '</label><input class="inp" id="cc" type="date" value="' + esc(c.caducidad || '') + '">' +
+    '<label class="f">Enlace de pago propio (opcional)</label><input class="inp" id="ce" inputmode="url" autocapitalize="none" placeholder="https://… (vacío = el general)" value="' + esc(c.enlacePagoPropio || '') + '">' +
+    '<label class="chk"><input type="checkbox" id="ca"' + (c.activo ? ' checked' : '') + '> Cuenta activa</label>' +
+    '<div class="row"><button class="btn" data-close>Cancelar</button><button class="btn pri" id="cs">Guardar</button></div>');
+  $('#cs', m).onclick = function () {
+    var data = {
+      nombre: $('#cn', m).value, usuario: $('#cu', m).value, password: $('#cp', m).value,
+      maxQR: $('#cm', m).value, caducidad: $('#cc', m).value, enlacePago: $('#ce', m).value, activo: $('#ca', m).checked
+    };
+    if (!nuevo) data.id = c.id;
+    run(function () { return api('adm_client_save', data); }).then(function () {
+      closeModal(m); return run(loadAdmin);
+    }).then(function () { toast('Guardado'); }).catch(function () {});
+  };
+}
+
+function renewAdm(c) {
+  var m = modal(
+    '<h2>Sumar días a ' + esc(c.nombre) + '</h2>' +
+    '<p class="mut" style="margin:0 0 6px">Cada bloque = 30 días. Se suman a los que le queden.</p>' +
+    '<label class="f">Bloques de 30 días</label><input class="inp" id="rn" type="number" min="1" max="60" value="1">' +
+    '<p id="rp" style="font-weight:600;margin:12px 0 0"></p>' +
+    '<div class="row"><button class="btn" data-close>Cancelar</button><button class="btn pri" id="rs">Sumar</button></div>');
+  function calc() {
+    var n = Math.max(1, Math.min(60, parseInt($('#rn', m).value, 10) || 1)), hoy = todayStr();
+    var base = c.caducidad && c.caducidad > hoy ? c.caducidad : hoy;
+    $('#rp', m).textContent = 'Nueva caducidad: ' + fmtDate(addDays(base, 30 * n)) + ' (+' + (30 * n) + ' días)';
+    return n;
+  }
+  $('#rn', m).addEventListener('input', calc); calc();
+  $('#rs', m).onclick = function () {
+    var n = calc();
+    run(function () { return api('adm_renew', { id: c.id, meses: n }); }).then(function () {
+      closeModal(m); return run(loadAdmin);
+    }).then(function () { toast('Días sumados'); }).catch(function () {});
+  };
+}
+
+/* ───────── ajustes ───────── */
+function settings() {
+  var adm = S.rol === 'admin';
+  var m = modal(
+    '<h2>Ajustes</h2>' +
+    (adm ? '<label class="f">Enlace de pago myPOS general</label><input class="inp" id="sl" inputmode="url" autocapitalize="none" placeholder="https://…" value="">' +
+      '<div class="row"><button class="btn pri" id="sls">Guardar enlace</button></div><hr style="border:0;border-top:1px solid var(--line);margin:18px 0 6px">' : '') +
+    '<h3 style="font-size:1rem;margin:10px 0 0">Cambiar contraseña</h3>' +
+    (adm ? '' : '<label class="f">Contraseña actual</label><input class="inp" id="pa" type="password" autocomplete="current-password">') +
+    '<label class="f">Nueva contraseña</label><input class="inp" id="pn" type="password" autocomplete="new-password" placeholder="mínimo 6 caracteres">' +
+    '<div class="row"><button class="btn pri" id="ps">Cambiar contraseña</button></div>' +
+    '<hr style="border:0;border-top:1px solid var(--line);margin:18px 0 6px">' +
+    '<div class="row"><button class="btn" data-act="shareapp">📤 Compartir app</button>' +
+    (isStandalone ? '' : '<button class="btn" data-act="install">⬇️ Instalar</button>') +
+    '<button class="btn bad" id="so">Cerrar sesión</button></div>' +
+    '<div class="row"><button class="btn" data-close>Cerrar</button></div>');
+  if (adm) {
+    api('adm_config').then(function (j) { $('#sl', m).value = j.config.enlacePagoDefault || ''; }).catch(function () {});
+    $('#sls', m).onclick = function () {
+      run(function () { return api('adm_config_save', { enlacePagoDefault: $('#sl', m).value }); }).then(function () { toast('Enlace guardado'); }).catch(function () {});
+    };
+  }
+  $('#ps', m).onclick = function () {
+    var nueva = $('#pn', m).value;
+    run(function () { return api(adm ? 'adm_pass' : 'cli_pass', { actual: adm ? undefined : $('#pa', m).value, nueva: nueva }); })
+      .then(function () { toast('Contraseña cambiada'); $('#pn', m).value = ''; if ($('#pa', m)) $('#pa', m).value = ''; }).catch(function () {});
+  };
+  $('#so', m).onclick = function () { closeModal(m); doLogout(); };
+}
+
+/* ───────── eventos ───────── */
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-act]'); if (!b || b.disabled) return;
+  var a = b.getAttribute('data-act'), id = b.getAttribute('data-id');
+  if (a === 'install') doInstall();
+  else if (a === 'shareapp') shareApp();
+  else if (a === 'settings') settings();
+  else if (a === 'newqr') editQR(null);
+  else if (a === 'viewqr') { var q = findQR(id); if (q) viewQR(q); }
+  else if (a === 'editqr') { var q2 = findQR(id); if (q2) editQR(q2); }
+  else if (a === 'statsqr') { var q3 = findQR(id); if (q3) statsQR(q3); }
+  else if (a === 'renew') {
+    var l = S.cli && S.cli.enlacePago;
+    if (l) { window.open(l, '_blank', 'noopener'); toast('Cuando se confirme tu pago se sumarán 30 días'); }
+    else toast('Pide a tu proveedor el enlace de pago');
+  }
+  else if (a === 'newcli') editCli(null);
+  else if (a === 'editcli') { var c = findCli(id); if (c) editCli(c); }
+  else if (a === 'renewadm') { var c2 = findCli(id); if (c2) renewAdm(c2); }
+  else if (a === 'delcli') {
+    var c3 = findCli(id); if (!c3) return;
+    if (!confirm('¿Eliminar a ' + c3.nombre + ' y todos sus QR? No se puede deshacer.')) return;
+    run(function () { return api('adm_client_delete', { id: id }); }).then(function () { return run(loadAdmin); })
+      .then(function () { toast('Cliente eliminado'); }).catch(function () {});
+  }
+});
+
+/* ───────── arranque ───────── */
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {});
+refreshInstall();
+if (token) {
+  busy(true);
+  enter().then(function () { busy(false); }, function (e) {
+    busy(false);
+    if (token) showLogin(e && e.message ? e.message : ''); // sin conexión: mantiene el token
+  });
+} else showLogin();
+
+})();
+</script>
+</body>
+</html>
