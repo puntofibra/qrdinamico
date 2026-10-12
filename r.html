@@ -7,8 +7,8 @@
 <meta name="theme-color" content="#4f46e5">
 <title>Cargando…</title>
 <style>
-  :root{--bg:#f4f5f9;--ink:#14161f;--mut:#667085;--acc:#4f46e5}
-  @media (prefers-color-scheme:dark){:root{--bg:#0d0f16;--ink:#eef0f6;--mut:#98a1b3;--acc:#818cf8}}
+  :root{--bg:#f4f5f9;--ink:#14161f;--mut:#667085;--acc:#4f46e5;--card:#fff;--line:#e4e7ee}
+  @media (prefers-color-scheme:dark){:root{--bg:#0d0f16;--ink:#eef0f6;--mut:#98a1b3;--acc:#818cf8;--card:#171a24;--line:#272b39}}
   *{box-sizing:border-box}
   html,body{height:100%;margin:0}
   body{background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
@@ -22,7 +22,11 @@
   @keyframes in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
   h1{font-size:1.25rem;margin:0 0 6px}
   p{margin:0;color:var(--mut)}
-  .ico{font-size:2.4rem;margin-bottom:6px}
+  .ico{width:78px;height:78px;margin:0 auto 16px;border-radius:24px;display:grid;place-items:center;color:#fff;background:linear-gradient(135deg,#4f46e5,#9333ea);box-shadow:0 14px 30px rgba(79,70,229,.35);animation:bob 3s ease-in-out infinite}
+  @keyframes bob{50%{transform:translateY(-6px) rotate(3deg)}}
+  .box.card{background:var(--card);border:1px solid var(--line);border-radius:26px;padding:34px 26px;box-shadow:0 20px 50px rgba(16,24,40,.12);max-width:380px}
+  .rb{margin-top:18px;border:0;border-radius:12px;padding:12px 22px;font:700 15px system-ui;color:#fff;background:linear-gradient(135deg,#4f46e5,#9333ea);cursor:pointer}
+  .brand{margin-top:18px;font-size:12px;color:var(--mut)}
 </style>
 </head>
 <body>
@@ -32,16 +36,24 @@
 <script>
 (function () {
   var box = document.getElementById('box');
+  var IC = {
+    search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
+    pause: '<circle cx="12" cy="12" r="9"/><path d="M10 9v6M14 9v6"/>',
+    lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+    wifi: '<path d="M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19.5h.01"/>'
+  };
   var MSG = {
-    noexiste: ['🔍', 'Este código QR no existe', 'Puede que se haya eliminado.'],
-    pausado:  ['⏸️', 'Este código QR está en pausa', 'Su propietario lo ha desactivado temporalmente.'],
-    vencido:  ['⌛', 'Este código QR no está disponible', 'El servicio de su propietario ha caducado.'],
-    bloqueado:['🚫', 'Este código QR no está disponible', 'Contacta con su propietario.'],
-    error:    ['📡', 'No se pudo cargar', 'Comprueba tu conexión e inténtalo de nuevo.']
+    noexiste: ['search', 'Este código QR no existe', 'Puede que su propietario lo haya eliminado.'],
+    pausado:  ['pause', 'Enlace pausado temporalmente', 'Su propietario lo ha desactivado por ahora. Vuelve a intentarlo más tarde.'],
+    vencido:  ['pause', 'Enlace pausado temporalmente', 'Este código QR volverá a funcionar en cuanto su propietario lo reactive.'],
+    bloqueado:['lock', 'Enlace no disponible', 'Este código QR no está disponible en este momento.'],
+    error:    ['wifi', 'No se pudo cargar', 'Comprueba tu conexión e inténtalo de nuevo.', 1]
   };
   function show(k) {
     var m = MSG[k] || MSG.error;
-    box.innerHTML = '<div class="ico">' + m[0] + '</div><h1>' + m[1] + '</h1><p>' + m[2] + '</p>';
+    box.innerHTML = '<div class="ico"><svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + IC[m[0]] + '</svg></div><h1>' + m[1] + '</h1><p>' + m[2] + '</p>' +
+      (m[3] ? '<button class="rb" onclick="location.reload()">Reintentar</button>' : '');
+    box.classList.add('card');
     document.title = m[1];
   }
   var q = (new URLSearchParams(location.search).get('q') || '').toLowerCase().replace(/[^a-z0-9]/g, '');
