@@ -1,7 +1,7 @@
 // Service worker: permite instalar la app y abrirla aunque falle la red.
 // NO toca r.html (la redirección del QR) ni las llamadas a la API.
-const VER = 'qrdin-v1';
-const SHELL = ['./', 'index.html', 'qr.js', 'config.js', 'manifest.json', 'icon-192.png', 'icon-512.png'];
+const VER = 'qrdin-v2';
+const SHELL = ['./', 'index.html', 'app.js', 'qr.js', 'qrstyle.js', 'landing.js', 'config.js', 'manifest.json', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(VER).then(function (c) { return c.addAll(SHELL); }).then(function () { return self.skipWaiting(); }));
